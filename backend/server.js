@@ -43,14 +43,15 @@ app.use('/api', notificationRoutes);
 
 // Root Health Route
 app.get('/', (req, res) => {
-  res.json({
-    status: 'online',
-    message: 'Server is running',
-    timestamp: new Date(),
-  });
+  res.status(200).json({ status: "Server is awake", timestamp: new Date() });
 });
 
 const PORT = process.env.PORT || 5000;
+
+// Lightweight health check route
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
 
 // Listen on PORT and 0.0.0.0 for cloud host compatibility (Render)
 server.listen(PORT, '0.0.0.0', () => {

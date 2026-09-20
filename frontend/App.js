@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { wakeUpServer } from './src/utils/wakeUpServer';
 import { View, Text, TouchableOpacity, ActivityIndicator, SafeAreaView, StatusBar } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
@@ -25,6 +26,19 @@ function MainApp() {
   const [authScreen, setAuthScreen] = useState('login'); // 'login' or 'register'
   const [activeTab, setActiveTab] = useState('chats'); // 'chats', 'search', 'notifications', 'profile'
   const [activeChat, setActiveChat] = useState(null); // { conversation, targetUser }
+  const [serverReady, setServerReady] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        await wakeUpServer();
+      } catch (e) {
+        console.warn('Server wake-up failed:', e);
+      } finally {
+        setServerReady(true);
+      }
+    })();
+  }, []);
 
   // Push notification tap navigation
   useEffect(() => {

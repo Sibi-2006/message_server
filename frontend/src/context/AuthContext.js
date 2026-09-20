@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL } from '../utils/constants';
+import { API_BASE_URL } from '../utils/apiConfig';
+import { wakeUpServer } from '../utils/wakeUpServer';
 
 const AuthContext = createContext();
 
@@ -8,13 +9,13 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [customApiUrl, setCustomApiUrl] = useState(API_URL);
+  const [customApiUrl, setCustomApiUrl] = useState(API_BASE_URL);
 
   useEffect(() => {
     loadStoredAuth();
   }, []);
 
-  const getActiveApiUrl = () => customApiUrl || API_URL;
+  const getActiveApiUrl = () => customApiUrl || API_BASE_URL;
 
   const loadStoredAuth = async () => {
     try {
@@ -40,41 +41,55 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (loginInput, password) => {
-    const res = await fetch(`${getActiveApiUrl()}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ loginInput, password }),
-    });
-
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      throw new Error(data.message || 'Login failed');
+    // Ensure the backend is awake before attempting login
+    await wakeUpServer();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+    try {
+      const res = await fetch(`${getActiveApiUrl()}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loginInput, password }),
+        signal: controller.signal,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Login failed');
+      }
+      setToken(data.token);
+      setUser(data.user);
+      await AsyncStorage.setItem('@auth_token', data.token);
+      await AsyncStorage.setItem('@auth_user', JSON.stringify(data.user));
+      return data;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    setToken(data.token);
-    setUser(data.user);
-    await AsyncStorage.setItem('@auth_token', data.token);
-    await AsyncStorage.setItem('@auth_user', JSON.stringify(data.user));
-    return data;
   };
 
   const register = async (name, username, email, password) => {
-    const res = await fetch(`${getActiveApiUrl()}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, username, email, password }),
-    });
-
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      throw new Error(data.message || 'Registration failed');
+    // Ensure backend is awake before attempting registration
+    await wakeUpServer();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+    try {
+      const res = await fetch(`${getActiveApiUrl()}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, username, email, password }),
+        signal: controller.signal,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Registration failed');
+      }
+      setToken(data.token);
+      setUser(data.user);
+      await AsyncStorage.setItem('@auth_token', data.token);
+      await AsyncStorage.setItem('@auth_user', JSON.stringify(data.user));
+      return data;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    setToken(data.token);
-    setUser(data.user);
-    await AsyncStorage.setItem('@auth_token', data.token);
-    await AsyncStorage.setItem('@auth_user', JSON.stringify(data.user));
-    return data;
   };
 
   const logout = async () => {
