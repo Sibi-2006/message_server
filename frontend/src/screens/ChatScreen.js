@@ -8,7 +8,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  BackHandler,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useMessaging } from '../context/MessagingContext';
 import { useTheme } from '../context/ThemeContext';
@@ -46,6 +48,15 @@ export default function ChatScreen({ conversation, targetUser, onBack }) {
       fetchMessages(conversation._id);
     }
   }, [conversation?._id, fetchMessages]);
+
+  useEffect(() => {
+    const backAction = () => {
+      onBack();
+      return true; // prevent default behavior (exit app)
+    };
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+    return () => backHandler.remove();
+  }, [onBack]);
 
   const handleTextChange = (text) => {
     setInputMessage(text);
@@ -104,6 +115,7 @@ export default function ChatScreen({ conversation, targetUser, onBack }) {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}
     >
       {/* Top Chat Navigation Bar */}
@@ -149,6 +161,7 @@ export default function ChatScreen({ conversation, targetUser, onBack }) {
             renderItem={renderMessageItem}
             onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
             contentContainerStyle={{ paddingBottom: 10 }}
+            keyboardShouldPersistTaps="handled"
           />
         )}
 
@@ -183,7 +196,7 @@ export default function ChatScreen({ conversation, targetUser, onBack }) {
           {sending ? (
             <ActivityIndicator color="#ffffff" size="small" />
           ) : (
-            <Text className="text-white text-lg font-bold">↑</Text>
+            <Ionicons name="paper-plane" size={20} color="white" />
           )}
         </TouchableOpacity>
       </View>

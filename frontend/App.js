@@ -2,7 +2,8 @@ import 'react-native-gesture-handler';
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { wakeUpServer } from './src/utils/wakeUpServer';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Image } from 'react-native';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
 import WakeUpScreen from './src/screens/WakeUpScreen';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
@@ -12,6 +13,7 @@ import { NotificationProvider } from './src/context/NotificationContext';
 
 import Header from './src/components/Header';
 import Toast from './src/components/Toast';
+import NotificationToast from './src/components/NotificationToast';
 
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
@@ -106,29 +108,11 @@ function MainApp() {
       />
 
       {/* Real-time Incoming Message Toast */}
-      {messageToast && (
-        <TouchableOpacity
-          onPress={() => {
-            clearMessageToast();
-            setActiveChat({ conversation: { _id: messageToast.conversationId } });
-          }}
-          activeOpacity={0.9}
-          className="absolute top-16 left-4 right-4 z-50 p-4 rounded-2xl bg-indigo-600 shadow-xl flex-row items-center space-x-3"
-        >
-          <Text className="text-2xl">💬</Text>
-          <View className="flex-1">
-            <Text className="text-white font-bold text-xs uppercase tracking-wider">
-              {messageToast.senderName}
-            </Text>
-            <Text numberOfLines={1} className="text-white text-sm font-medium">
-              {messageToast.text}
-            </Text>
-          </View>
-          <TouchableOpacity onPress={clearMessageToast}>
-            <Text className="text-white text-xs">✕</Text>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      )}
+      <NotificationToast
+        messageToast={messageToast}
+        clearMessageToast={clearMessageToast}
+        onPress={() => setActiveChat({ conversation: { _id: messageToast.conversationId } })}
+      />
 
       {/* Active Screen View */}
       <View className="flex-1">
@@ -239,16 +223,18 @@ function MainApp() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <MessagingProvider>
-          <NavigationContainer>
-            <NotificationProvider>
-              <MainApp />
-            </NotificationProvider>
-          </NavigationContainer>
-        </MessagingProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <MessagingProvider>
+            <NavigationContainer>
+              <NotificationProvider>
+                <MainApp />
+              </NotificationProvider>
+            </NavigationContainer>
+          </MessagingProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

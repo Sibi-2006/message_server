@@ -6,6 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  BackHandler,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -14,6 +15,15 @@ import Avatar from '../components/Avatar';
 export default function SearchScreen({ onSelectUser, onBack }) {
   const { token, apiUrl } = useAuth();
   const { isDark } = useTheme();
+
+  useEffect(() => {
+    const backAction = () => {
+      onBack();
+      return true; // prevent default behavior (exit app)
+    };
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+    return () => backHandler.remove();
+  }, [onBack]);
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);

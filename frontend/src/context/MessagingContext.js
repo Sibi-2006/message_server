@@ -138,8 +138,19 @@ export const MessagingProvider = ({ children }) => {
           });
         } else {
           // New conversation created by incoming message
-          fetchConversations();
-          return prevConvs;
+          const newConv = {
+            _id: conversationId,
+            participants: [sender?._id || sender?.id, user?.id || user?._id],
+            otherUser: sender,
+            lastMessage: message.text,
+            lastMessageAt: message.createdAt,
+            unreadCount: 1,
+          };
+          
+          fetchConversations(); // Fetch full list in background
+          
+          // Prepend optimistically
+          return [newConv, ...prevConvs];
         }
       });
 
