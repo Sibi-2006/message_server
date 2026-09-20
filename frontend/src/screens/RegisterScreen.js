@@ -40,7 +40,18 @@ export default function RegisterScreen({ onNavigateLogin }) {
     try {
       await register(name.trim(), username.trim().toLowerCase(), email.trim(), password.trim());
     } catch (err) {
-      setError(err.message || 'Registration failed');
+      // Detailed error handling
+      if (err.name === 'AbortError') {
+        setError('Could not reach server. Please check your connection and try again.');
+      } else if (err.status >= 400 && err.status < 500) {
+        // Validation or client errors – show exact backend message
+        setError(err.message || 'Invalid input');
+      } else if (err.status >= 500) {
+        console.error('Server error during registration:', err);
+        setError('Something went wrong on our end. Please try again in a moment.');
+      } else {
+        setError(err.message || 'Registration failed');
+      }
     } finally {
       setLoading(false);
     }

@@ -6,7 +6,7 @@ const THEME_STORAGE_KEY = '@app_theme_mode';
 const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
     loadThemePreference();

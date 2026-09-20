@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../utils/apiConfig';
 import { wakeUpServer } from '../utils/wakeUpServer';
@@ -80,7 +81,9 @@ export const AuthProvider = ({ children }) => {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Registration failed');
+        const err = new Error(data.message || 'Registration failed');
+        err.status = res.status;
+        throw err;
       }
       setToken(data.token);
       setUser(data.user);

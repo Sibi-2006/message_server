@@ -1,7 +1,10 @@
+import 'react-native-gesture-handler';
 import React, { useState, useEffect } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
 import { wakeUpServer } from './src/utils/wakeUpServer';
-import { View, Text, TouchableOpacity, ActivityIndicator, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar, Image } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import WakeUpScreen from './src/screens/WakeUpScreen';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { MessagingProvider, useMessaging } from './src/context/MessagingContext';
@@ -27,17 +30,24 @@ function MainApp() {
   const [activeTab, setActiveTab] = useState('chats'); // 'chats', 'search', 'notifications', 'profile'
   const [activeChat, setActiveChat] = useState(null); // { conversation, targetUser }
   const [serverReady, setServerReady] = useState(false);
+  const [wakeUpStatus, setWakeUpStatus] = useState('Connecting…');
 
   useEffect(() => {
+    let t1, t2;
     (async () => {
+      t1 = setTimeout(() => setWakeUpStatus('Almost there…'), 8000);
+      t2 = setTimeout(() => setWakeUpStatus('This is taking longer than usual…'), 20000);
       try {
         await wakeUpServer();
       } catch (e) {
         console.warn('Server wake-up failed:', e);
       } finally {
+        clearTimeout(t1);
+        clearTimeout(t2);
         setServerReady(true);
       }
     })();
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
   // Push notification tap navigation
@@ -50,12 +60,8 @@ function MainApp() {
     return () => subscription.remove();
   }, []);
 
-  if (authLoading) {
-    return (
-      <View className={`flex-1 items-center justify-center ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
-        <ActivityIndicator size="large" color="#6366F1" />
-      </View>
-    );
+  if (!serverReady || authLoading) {
+    return <WakeUpScreen statusText={wakeUpStatus} />;
   }
 
   // Auth Flow
@@ -155,7 +161,17 @@ function MainApp() {
           onPress={() => setActiveTab('chats')}
           className="items-center relative px-4"
         >
-          <Text className="text-xl">{activeTab === 'chats' ? '💬' : '🗨️'}</Text>
+          <Image
+            source={require('./assets/icon.png')}
+            style={{
+              width: 26,
+              height: 26,
+              borderRadius: 6,
+              opacity: activeTab === 'chats' ? 1 : 0.45,
+              tintColor: activeTab === 'chats' ? undefined : (isDark ? '#9CA3AF' : '#6B7280'),
+            }}
+            resizeMode="contain"
+          />
           <Text
             className={`text-[10px] font-bold mt-1 ${
               activeTab === 'chats' ? 'text-indigo-600' : isDark ? 'text-gray-400' : 'text-gray-500'
@@ -226,9 +242,11 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <MessagingProvider>
-          <NotificationProvider>
-            <MainApp />
-          </NotificationProvider>
+          <NavigationContainer>
+            <NotificationProvider>
+              <MainApp />
+            </NotificationProvider>
+          </NavigationContainer>
         </MessagingProvider>
       </AuthProvider>
     </ThemeProvider>

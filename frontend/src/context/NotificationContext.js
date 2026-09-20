@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import { registerForPushNotificationsAsync, syncPushTokenWithBackend } from '../services/pushNotification';
+import * as Notifications from 'expo-notifications';
+import { useNavigation } from '@react-navigation/native';
 
 const NotificationContext = createContext();
 
@@ -11,6 +13,7 @@ export const NotificationProvider = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [socket, setSocket] = useState(null);
+const navigation = useNavigation();
   const [toastMessage, setToastMessage] = useState(null);
 
   // Fetch initial notifications
@@ -35,6 +38,14 @@ export const NotificationProvider = ({ children }) => {
 
   // Sync Push Token & Register Socket.IO on Auth
   useEffect(() => {
+    
+    const notificationResponseListener = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response?.notification?.request?.content?.data;
+      if (data?.conversationId) {
+        // Navigate to chat screen with conversationId
+        navigation.navigate('Chat', { conversationId: data.conversationId });
+      }
+    });
     if (!token) {
       if (socket) {
         socket.disconnect();
@@ -42,7 +53,9 @@ export const NotificationProvider = ({ children }) => {
       }
       setNotifications([]);
       setUnreadCount(0);
-      return;
+      return () => {
+        notificationResponseListener.remove();
+      };
     }
 
     // Initial fetch
@@ -56,7 +69,20 @@ export const NotificationProvider = ({ children }) => {
       }
     })();
 
-    // Socket.IO setup
+    return () => {
+      notificationResponseListener.remove();
+    };
+  }, [token, apiUrl, fetchNotifications, navigation]);
+
+  // Socket.IO setup
+  useEffect(() => {
+    if (!token) {
+      if (socket) {
+        socket.disconnect();
+        setSocket(null);
+      }
+      return;
+    }
     console.log(`[Socket Client] Connecting to ${apiUrl}`);
     const newSocket = io(apiUrl, {
       auth: { token },
@@ -69,14 +95,8 @@ export const NotificationProvider = ({ children }) => {
 
     newSocket.on('new_notification', (newNotif) => {
       console.log('[Socket Client Received new_notification]', newNotif);
-
-      // Add to notifications list
       setNotifications((prev) => [newNotif, ...prev]);
-
-      // Increment unread count
       setUnreadCount((prev) => prev + 1);
-
-      // Show toast alert
       setToastMessage({
         id: Date.now().toString(),
         type: newNotif.type,
@@ -89,11 +109,8 @@ export const NotificationProvider = ({ children }) => {
     });
 
     setSocket(newSocket);
-
-    return () => {
-      newSocket.disconnect();
-    };
-  }, [token, apiUrl, fetchNotifications]);
+    return () => newSocket.disconnect();
+  }, [token, apiUrl]);
 
   // Mark single as read
   const markAsRead = async (id) => {
